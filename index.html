@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            line-height: 20px;
+        }
+
+        body {
+            font-family: Consolas, monospace;
+            margin: 0;
+            padding: 0;
+        }
+
+        #editor {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+
+        #line-numbers {
+            flex-shrink: 0;
+            background-color: #eee;
+            padding: 10px;
+            text-align: right;
+            user-select: none;
+        }
+
+        #code {
+            flex-grow: 1;
+            background-color: #fff;
+            padding: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            tab-size: 4;
+            outline: none;
+            border: none;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .token {
+            display: inline-block;
+            font-size: 15px;
+            color: #888;
+        }
+
+        .token.token-Operator {
+            color: #6495ed;
+        }
+
+        .token.token-DoubleOperator {
+            color: #0047c5;
+        }
+
+        .token.token-Symbol {
+            color: #1f355d;
+        }
+
+        .token.token-Whitespace {
+            color: #6495ed;
+        }
+
+        .token.token-LineFeed {
+            color: #d367d3;
+            display: inline-block;
+        }
+
+        .token.token-Keyword {
+            color: #d6440c;
+        }
+
+        .token.token-Identifier {
+            /*color: #a9a9a9;*/
+            color: #8e8989;
+        }
+
+        .token.token-Number {
+            color: #08964e;
+        }
+
+        .token.token-Float {
+            color: #03522a;
+        }
+
+        .token.token-String {
+            color: #d68e0a;
+        }
+
+        .token.token-Char {
+            color: #f7be56;
+        }
+    </style>
+</head>
+<body>
+<div id="editor">
+    <div id="line-numbers"></div>
+    <div id="code" contenteditable="true"></div>
+</div>
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/2.2.0/jquery.js"></script>
+
+<!--Here is some common functions.-->
+<!--=================================================================-->
+<script>
+    // Parsing params in url
+    function getUrlParam(param) {
+        let slices = window.location.href.split('?');
+        if (slices[1]) {
+            let searchString = slices[1];
+            let params = searchString.split('&');
+            for (let i = 0; i <= params.length - 1; i++) {
+                let v = params[i];
+                let arr = v.split('=');
+                if (arr[0] && arr[0] === param) {
+                    return arr[1];
+                }
+            }
+        }
+        return false;
+    }
+
+    // Move the input cursor to the end of the input box.
+    function moveCursorToEnd(inputBox) {
+        let range = document.createRange();
+        range.selectNodeContents(inputBox);
+        range.collapse(false);
+
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        updateLineNumbers(inputBox);
+    }
+
+    function updateLineNumbers(inputBox) {
+        lineNumbers.style.lineHeight = window.getComputedStyle(inputBox).getPropertyValue('line-height');
+        const lines = inputBox.innerHTML.split('<br>').length-1;
+        lineNumbers.innerHTML = Array.from({length: lines}).map((_, i) => `<div>${i + 1}</div>`).join('');
+    }
+
+    function getRenderMatrix(inputBox) {
+        let matrix = [];
+        let row = [];
+        let stream = inputBox.innerText;
+        window.lexer.start(stream)
+        let tokens = window.lexer.DFA.result.tokens;
+        for (let token of tokens) {
+            if (token.type === "Whitespace") {
+                row.push("<span class='token token-" + token.type + "'>" + " " + "</span>");
+            } else if (token.type === "LineFeed") {
+                if (row.length === 0) {
+                    matrix.push("<span class='token token-" + token.type + "'>" + "<br>" + "</span>");
+                } else {
+                    matrix.push(row);
+                    matrix.push("<span class='token token-" + token.type + "'>" + "<br>" + "</span>");
+                }
+                row = [];
+            } else {
+                row.push("<span class='token token-" + token.type + "'>" + token.value + "</span>");
+            }
+        }
+        if (row.length > 0) {
+            matrix.push(row);
+        }
+        return matrix;
+    }
+
+    function renderRealtime(inputBox) {
+        console.log(getRenderMatrix(inputBox));
+        // $("#code").html();
+    }
+
+</script>
+
+<script>
+    let lang = getUrlParam('lang');
+    if (lang === 'c') {
+        document.write('<script src="https://cdn.jsdelivr.net/gh/wgrape/lexer@1.10.0/package/c-lexer.min.js"><\/script>');
+    } else if (lang === 'sql') {
+        document.write('<script src="https://cdn.jsdelivr.net/gh/wgrape/lexer@1.10.0/package/sql-lexer.min.js"><\/script>');
+    } else {
+        window.location.href = window.location.pathname + '?lang=c';
+    }
+    // Wait load lexer.js
+    setTimeout(function () {
+        window.lexer.setConfig({
+            ignoreTokens: [],
+            ignoreValues: [],
+            compressLineFeed: false,
+        });
+    }, 100)
+</script>
+
+<script>
+    const code = document.getElementById('code');
+    const lineNumbers = document.getElementById('line-numbers');
+    code.focus();
+    $("#code").append("<div><br></div>");
+    moveCursorToEnd(code);
+
+    code.addEventListener('input', (e) => {
+        code.focus();
+        renderRealtime(code)
+        moveCursorToEnd(code)
+    });
+
+    code.addEventListener('keydown', (e) => {
+        if (e.key === "Enter") {
+            $("#code").append("<div><br></div>");
+            moveCursorToEnd(code);
+            e.preventDefault();
+        }
+
+        // 判断按下的是删除键（Backspace 或 Delete）
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            // 阻止默认行为，即防止删除整个元素
+            e.preventDefault();
+
+            // 判断选中的内容
+            const selection = window.getSelection();
+            selection.modify('extend', 'backward', 'character');
+            selection.deleteFromDocument();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (!range.collapsed) {
+                    // 如果选中了内容，删除选中内容
+                    range.deleteContents();
+                } else if (e.key === 'Backspace') {
+                    // 如果没有选中内容，按下 Backspace 键则删除光标前一个字符
+                    const prevNode = range.startContainer.previousSibling;
+                    if (prevNode) {
+                        prevNode.remove();
+                    }
+                } else {
+                    // 如果没有选中内容，按下 Delete 键则删除光标后一个字符
+                    const nextNode = range.startContainer.nextSibling;
+                    if (nextNode) {
+                        nextNode.remove();
+                    }
+                }
+            }
+        }
+
+        moveCursorToEnd(code);
+    });
+</script>
+</body>
+</html>

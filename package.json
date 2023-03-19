@@ -1,0 +1,27 @@
+{
+  "name": "chain-editor",
+  "version": "0.0.1",
+  "description": "A simple and powerful web code editor based on puckchain.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test:unit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puckchain/editor.git"
+  },
+  "keywords": [
+    "editor",
+    "lexer",
+    "puckchain"
+  ],
+  "author": "WGrape",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/puckchain/editor/issues"
+  },
+  "homepage": "https://github.com/puckchain/editor#readme",
+  "dependencies": {
+    "puckchain": "^0.1.1"
+  }
+}
